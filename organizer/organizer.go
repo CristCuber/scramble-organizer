@@ -370,18 +370,11 @@ func getWCIF(competitionId string) (WCACompetition, error) {
 	return Competition, nil
 }
 
-func getAlphabetFromOrder(number int) string {
-	if number <= 0 {
+func getAlphabetFromOrder(num int) string {
+	if num < 1 || num > 26 {
 		return ""
 	}
-
-	if number > 26 {
-		firstLetter := string('A' + ((number - 1) / 26) - 1)
-		secondLetter := string('A' + ((number - 1) % 26))
-		return firstLetter + secondLetter
-	}
-
-	return string('A' + number - 1)
+	return string('A' + num - 1)
 }
 
 func moveFile(src, dst string) error {
