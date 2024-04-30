@@ -197,7 +197,7 @@ func (o *Org) OrganizScramble() error {
 			}
 		}
 
-		eventDir := scrambleDir + "/" + sortedEvent.EventVenue + "/" + sortedEvent.EventRoom + "/" + currentDateString + "/" + strconv.Itoa(scheduleOrder) + "_" + sortedEvent.EventName + "_" + strconv.Itoa(sortedEvent.EventRound)
+		eventDir := scrambleDir + "/" + sortedEvent.EventVenue + "/" + sortedEvent.EventRoom + "/" + currentDateString + "/" + strconv.Itoa(scheduleOrder) + "_" + sortedEvent.EventName + "_r" + strconv.Itoa(sortedEvent.EventRound)
 		if sortedEvent.EventCode == "333fm" || sortedEvent.EventCode == "333mbf" {
 			eventDir = eventDir + "_a" + strconv.Itoa(sortedEvent.EventAttempt)
 		}
@@ -374,7 +374,7 @@ func getAlphabetFromOrder(num int) string {
 	if num < 1 || num > 26 {
 		return ""
 	}
-	return string('A' + num - 1)
+	return string(rune('A' + num - 1))
 }
 
 func moveFile(src, dst string) error {
