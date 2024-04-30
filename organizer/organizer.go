@@ -107,7 +107,15 @@ func (o *Org) OrganizScramble() error {
 		return eventDetail[i].EventStartTime.Before(eventDetail[j].EventStartTime)
 	})
 
-	scrambleZipName := competition.CompetitionName + ".zip"
+	exePath, err := os.Executable()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+
+	exeDir := filepath.Dir(exePath)
+
+	scrambleZipName := exeDir + "/" + competition.CompetitionName + ".zip"
 	if _, err := os.Stat(scrambleZipName); os.IsNotExist(err) {
 		fmt.Println("Zip file does not exist")
 		return err
@@ -166,7 +174,7 @@ func (o *Org) OrganizScramble() error {
 		passcodeMap[passcodeKey] = splitStr[1]
 	}
 
-	scrambleDir := "scramble"
+	scrambleDir := exeDir + "/scramble"
 	scheduleOrder := 1
 	displayScrambleDir := extractionFolder + "/scramble_display"
 	var currentDate time.Time
@@ -312,31 +320,9 @@ func unzipScrambleFile(zipFileName string, extractionFolder string, displayFileN
 					return err
 				}
 
-				displayScrambleZipReader, err := zip.OpenReader(extractionFolder + "/" + displayFileName)
+				err = unzipDisplayFile(extractionFolder+"/"+filepath.Base(scrambleFile.Name), displayScrambleDir)
 				if err != nil {
 					return err
-				}
-				defer scrambleZipReader.Close()
-
-				for _, displayScrambleFile := range displayScrambleZipReader.File {
-					displayZippedFile, err := scrambleFile.Open()
-					if err != nil {
-						return err
-					}
-					defer displayZippedFile.Close()
-
-					extracDisplayPath := filepath.Join(displayScrambleDir, filepath.Base(displayScrambleFile.Name))
-
-					extractedDisplayFile, err := os.OpenFile(extracDisplayPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, displayScrambleFile.Mode())
-					if err != nil {
-						return err
-					}
-					defer extractedDisplayFile.Close()
-
-					_, err = io.Copy(extractedDisplayFile, displayZippedFile)
-					if err != nil {
-						return err
-					}
 				}
 			}
 		}
@@ -391,4 +377,41 @@ func getOrderFromAlphabet(alphabet string) int {
 		return -1 // Return -1 for invalid input
 	}
 	return int(alphabet[0] - 'A' + 1)
+}
+
+func unzipDisplayFile(zipFile, destFolder string) error {
+	r, err := zip.OpenReader(zipFile)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	if err := os.MkdirAll(destFolder, os.ModePerm); err != nil {
+		return err
+	}
+
+	for _, f := range r.File {
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+		defer rc.Close()
+
+		filePath := filepath.Join(destFolder, f.Name)
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(filePath, os.ModePerm)
+		} else {
+			dstFile, err := os.Create(filePath)
+			if err != nil {
+				return err
+			}
+			defer dstFile.Close()
+
+			if _, err = io.Copy(dstFile, rc); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
