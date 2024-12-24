@@ -256,11 +256,6 @@ func (o *Org) OrganizScramble() error {
 		}
 
 		scheduleOrder = scheduleOrder + 1
-
-		_, err = passcodeWriter.WriteString("\n")
-		if err != nil {
-			return err
-		}
 	}
 
 	if err := passcodeWriter.Flush(); err != nil {
