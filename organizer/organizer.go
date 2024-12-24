@@ -1,7 +1,6 @@
 package organizer
 
 import (
-	"archive/zip"
 	"bufio"
 	"encoding/json"
 	"fmt"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/yeka/zip"
 )
 
 type Org struct{}
@@ -125,7 +126,28 @@ func (o *Org) OrganizScramble() error {
 	passcodeFileName := competition.CompetitionName + " - Computer Display PDF Passcodes - SECRET.txt"
 
 	extractionFolder := "extracted_files"
-	err = unzipScrambleFile(scrambleZipName, extractionFolder, computerDisplayZipName, passcodeFileName)
+	zipPassword := ""
+
+	isEncrypted, err := isZipEncrypted(scrambleZipName)
+	if err != nil {
+		fmt.Println("Error checking ZIP file encryption:", err)
+		return err
+	}
+
+	if isEncrypted {
+		fmt.Println("The ZIP file is password-protected.")
+		fmt.Print("Enter the password: ")
+		scanner := bufio.NewScanner(os.Stdin)
+		if scanner.Scan() {
+			zipPassword = scanner.Text()
+		}
+		if err := scanner.Err(); err != nil {
+			fmt.Println("Error reading password:", err)
+			return err
+		}
+	}
+
+	err = unzipScrambleFile(scrambleZipName, extractionFolder, computerDisplayZipName, passcodeFileName, zipPassword)
 	if err != nil {
 		panic(err)
 	}
@@ -274,7 +296,7 @@ func (o *Org) OrganizScramble() error {
 	return nil
 }
 
-func unzipScrambleFile(zipFileName string, extractionFolder string, displayFileName string, passcodeFileName string) error {
+func unzipScrambleFile(zipFileName string, extractionFolder string, displayFileName string, passcodeFileName string, zipPassword string) error {
 	err := os.MkdirAll(extractionFolder, os.ModePerm)
 	if err != nil {
 		return err
@@ -287,6 +309,10 @@ func unzipScrambleFile(zipFileName string, extractionFolder string, displayFileN
 	defer scrambleZipReader.Close()
 
 	for _, scrambleFile := range scrambleZipReader.File {
+		if scrambleFile.IsEncrypted() {
+			scrambleFile.SetPassword(zipPassword)
+		}
+
 		if filepath.Base(scrambleFile.Name) == displayFileName || filepath.Base(scrambleFile.Name) == passcodeFileName {
 			zippedFile, err := scrambleFile.Open()
 			if err != nil {
@@ -409,4 +435,20 @@ func unzipDisplayFile(zipFile, destFolder string) error {
 	}
 
 	return nil
+}
+
+func isZipEncrypted(zipFileName string) (bool, error) {
+	reader, err := zip.OpenReader(zipFileName)
+	if err != nil {
+		return false, err
+	}
+	defer reader.Close()
+
+	for _, file := range reader.File {
+		if file.IsEncrypted() {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
